@@ -116,7 +116,7 @@ public:
             bool done = false;
             do {
                 done = bfu_in.read(tag, flag);
-                // wait();
+                wait();
             } while (!done);
             cout << "Thread " << tag << ", flag " << flag << endl;
         }
@@ -149,13 +149,13 @@ public:
         stream_in.reset();
         wait();
 
-        for (int i = 0; i < NUM_PKT; i++) {
-            outfile << "Packet " << i << ":" << endl;
+        // for (int i = 0; i < NUM_PKT; i++) {
+            // outfile << "Packet " << i << ":" << endl;
             do {
                 out_data = stream_in.read();
                 outfile << out_data;
-            } while (!out_data.last);
-        }
+            } while (true);
+        // }
 
         // sc_stop();
     }

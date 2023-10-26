@@ -193,82 +193,111 @@ public:
 template<int TAG_W, int IP_W>
 class out_simple {
 public:
+    struct payload_t {
+        sc_uint<TAG_W>     tag;
+        sc_uint<IP_W>      flag;
+
+        static const unsigned int width = TAG_W+IP_W;
+
+        payload_t(sc_uint<TAG_W> tag = 0, sc_uint<IP_W> flag = 0) : 
+            tag(tag), flag(flag) {}
+
+        template <unsigned int Size>
+        void Marshall(Marshaller<Size> &m) {
+            m &tag;
+            m &flag;
+        }
+
+        payload_t& operator= (const payload_t& val) {
+            tag   = val.tag;
+            flag  = val.flag;
+            return (*this);
+        }
+
+        bool operator== (const payload_t& val) const {
+            return ((tag == val.tag) && (flag == val.flag));
+        }
+
+        inline friend std::ostream& operator<<(std::ostream& os, const payload_t& val) {
+            os << "tag = " << val.tag << hex << "; flag = " << val.flag << dec << std::endl;
+            return os;
+        }
+
+        inline friend void sc_trace(sc_trace_file*& f, const payload_t& val, std::string name) {
+            sc_trace(f, val.tag, name + ".tag");
+            sc_trace(f, val.flag, name + ".flag");
+        }
+    };
+
+    template <Connections::connections_port_t PortType = AUTO_PORT>
+    class chan {
+    public:
+        Connections::Combinational<payload_t, PortType> t;
+
+        chan() {}
+
+        chan(const char *name)
+            : t(nvhls_concat(name, "_t")) {};
+
+    }; // primate_stream::chan
+
+    template <Connections::connections_port_t PortType = AUTO_PORT>
     class master {
     public:
-        master(const char* name=sc_gen_unique_name("primate_bfu_mc_out_m")) :
-            valid((std::string(name)+"_valid").c_str()),
-            tag((std::string(name)+"_tag").c_str()),
-            flag((std::string(name)+"_flag").c_str())
-        {}
+        Connections::Out<payload_t, PortType> t;
 
-        template<typename CHANNEL>
-        inline void bind(CHANNEL &channel) {
-            valid(channel.valid);
-            tag(channel.tag);
-            flag(channel.flag);
+        master() {}
+
+        master(const char *name)
+            : t(nvhls_concat(name, "_t")) {}
+
+        void reset() {
+            t.Reset();
         }
 
-        template<typename CHANNEL>
-        inline void operator () (CHANNEL &channel) {
-            bind(channel);
+        bool write(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag) {
+            payload_t tmp;
+            tmp.tag = out_tag;
+            tmp.flag = out_flag;
+            return t.PushNB(tmp);
         }
 
-        inline void reset() {
-            valid = false;
-            tag.write(0);
-            flag.write(0);
+        template<class CHANNEL>
+        void operator () (CHANNEL &c) {
+            t(c.t);
         }
+    }; // class master
 
-        inline void write(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag) {
-            valid.write(true);
-            tag.write(out_tag);
-            flag.write(out_flag);
-            wait();
-            valid.write(false);
-        }
-
-    public:
-        sc_out<bool>                          valid;
-        sc_out<sc_uint<TAG_W>>                tag;
-        sc_out<sc_uint<IP_W>>                 flag;
-    }; // master
-
+    template <Connections::connections_port_t PortType = AUTO_PORT>
     class slave {
     public:
-        slave(const char* name=sc_gen_unique_name("primate_bfu_mc_out_s")) :
-            valid((std::string(name)+"_valid").c_str()),
-            tag((std::string(name)+"_tag").c_str()),
-            flag((std::string(name)+"_flag").c_str())
-        {}
+        Connections::In<payload_t, PortType> t;
 
-        template<typename CHANNEL>
-        inline void bind(CHANNEL &channel) {
-            valid(channel.valid);
-            tag(channel.tag);
-            flag(channel.flag);
+        slave() {}
+
+        slave(const char *name)
+            : t(nvhls_concat(name, "_t")) {}
+
+        void reset() {
+            t.Reset();
         }
 
-        template<typename CHANNEL>
-        inline void operator () (CHANNEL &channel) {
-            bind(channel);
+        bool read(sc_uint<TAG_W> &out_tag, sc_uint<IP_W> &out_flag) {
+            payload_t tmp;
+            if (t.PopNB(tmp)) {
+                out_tag = tmp.tag;
+                out_flag = tmp.flag;
+                return true;
+            } else {
+                return false;
+            }
         }
 
-        inline bool read(sc_uint<TAG_W> &out_tag, sc_uint<IP_W> &out_flag) {
-            out_tag = tag;
-            out_flag = flag;
-            return valid.read();
+        template <class CHANNEL>
+        void operator () (CHANNEL &c) {
+            t(c.t);
         }
-
-    public:
-        sc_in<bool>                          valid;
-        sc_in<sc_uint<TAG_W>>                tag;
-        sc_in<sc_uint<IP_W>>                 flag;
-    }; // slave
-
-public:
-    sc_signal<bool>                          valid;
-    sc_signal<sc_uint<TAG_W>>                tag;
-    sc_signal<sc_uint<IP_W>>                 flag;
+    }; // class slave
 }; // out_simple
 
 namespace read_mc {

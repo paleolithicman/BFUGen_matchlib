@@ -82,7 +82,7 @@ public:
     
     primate_ctrl_ou::master<>        cmd_out;
     primate_stream_512_4::master<>   pkt_buf_out;
-    primate_bfu_ou::slave            bfu_in;
+    primate_bfu_ou::slave<>          bfu_in;
 
     SC_HAS_PROCESS(source);
     source(sc_module_name name_) {
@@ -94,6 +94,7 @@ public:
         sc_uint<IP_WIDTH> flag;
         // Reset
         cmd_out.reset();
+        bfu_in.reset();
         pkt_buf_out.reset();
         i_rst.write(1);
         wait();
@@ -108,14 +109,14 @@ public:
             primate_ctrl_ou::cmd_t cmd(i, 4, 1, HDR_COUNT, 0);
             cmd_out.write(cmd);
 
-            pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[0]), i, EMPTY, 0));
-            pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[1]), i, 0, 0));
+            // pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[0]), i, EMPTY, 0));
+            // pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[1]), i, 0, 0));
             pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[2]), i, 0, 1));
 
             bool done = false;
             do {
                 done = bfu_in.read(tag, flag);
-                wait();
+                // wait();
             } while (!done);
             cout << "Thread " << tag << ", flag " << flag << endl;
         }
@@ -174,7 +175,7 @@ public:
 
     primate_stream_512_4::chan<>        dut_to_tb_data;
     primate_ctrl_ou::chan<>             tb_to_dut_ctrl;
-    primate_bfu_ou                      dut_to_tb_ctrl;
+    primate_bfu_ou::chan<>              dut_to_tb_ctrl;
     primate_stream_512_4::chan<>        pkt_buf;
     primate_bfu_rdreq_ou::chan<>        bfu_rdreq;
     primate_bfu_rdrsp_ou::chan<>        bfu_rdrsp;

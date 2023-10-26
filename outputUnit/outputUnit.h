@@ -66,24 +66,27 @@ SC_MODULE(outputUnit) {
     sc_in<bool> i_clk;
     sc_in<bool> i_rst;
 
-    sc_uint<OPCODE_WIDTH> opcode;
-    sc_uint<IP_WIDTH> bt0;
-    sc_uint<IP_WIDTH> bt1;
-    sc_uint<IP_WIDTH> bt2;
+    sc_signal<sc_uint<OPCODE_WIDTH>> opcode;
+    sc_signal<sc_uint<IP_WIDTH>> bt0;
+    sc_signal<sc_uint<IP_WIDTH>> bt1;
+    sc_signal<sc_uint<IP_WIDTH>> bt2;
 
     primate_stream_512_4::master<>    CCS_INIT_S1(stream_out);
 
     primate_ctrl_ou::slave<>          CCS_INIT_S1(cmd_in);
 
-    primate_bfu_ou::master            bfu_out;
+    primate_bfu_ou::master<>          CCS_INIT_S1(bfu_out);
 
     primate_bfu_rdreq_ou::master<>    CCS_INIT_S1(bfu_rdreq);
     primate_bfu_rdrsp_ou::slave<>     CCS_INIT_S1(bfu_rdrsp);
 
     primate_stream_512_4::slave<>     CCS_INIT_S1(pkt_buf_in);
 
+    sc_signal<bool> init_done;
+    sc_signal<sc_uint<NUM_THREADS_LG>> init_tag;
     sc_signal<bool> done;
     sc_signal<sc_uint<NUM_THREADS_LG>> done_tag;
+    sc_fifo<sc_uint<NUM_THREADS_LG>> req_rsp_fifo;
     sc_signal<sc_uint<1>> hdr_done[NUM_THREADS];
     sc_signal<sc_biguint<32>> hdr_arg[NUM_THREADS];
 
@@ -95,7 +98,7 @@ SC_MODULE(outputUnit) {
     void outputUnit_rsp();
     inline void outputUnit_rsp_core(sc_biguint<32> hdr_count, sc_uint<NUM_THREADS_LG> tag);
 
-    SC_CTOR(outputUnit) {
+    SC_CTOR(outputUnit) : req_rsp_fifo(2) {
         SC_CTHREAD(outputUnit_cmd, i_clk.pos());
         reset_signal_is(i_rst, true);  // true is hihg, flase is low
         SC_CTHREAD(outputUnit_req, i_clk.pos());

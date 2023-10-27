@@ -86,19 +86,27 @@ public:
 
     SC_HAS_PROCESS(source);
     source(sc_module_name name_) {
+        SC_CTHREAD(th_reset, i_clk.pos());
         SC_CTHREAD(th_run, i_clk.pos());
+        reset_signal_is(i_rst, true);
+    }
+
+    void th_reset() {
+        i_rst.write(1);
+        wait(5);
+        i_rst.write(0);
+        wait();
     }
 
     void th_run() {
         sc_uint<NUM_THREADS_LG> tag;
         sc_uint<IP_WIDTH> flag;
+        bool early;
         // Reset
         cmd_out.reset();
         bfu_in.reset();
         pkt_buf_out.reset();
-        i_rst.write(1);
-        wait();
-        i_rst.write(0);
+
         wait();
 
         // Send stimulus to DUT
@@ -115,10 +123,10 @@ public:
 
             bool done = false;
             do {
-                done = bfu_in.read(tag, flag);
+                done = bfu_in.read(tag, flag, early);
                 wait();
             } while (!done);
-            cout << "Thread " << tag << ", flag " << flag << endl;
+            cout << "Thread " << tag << ", flag " << flag << ", early " << early << endl;
         }
 
         // wait(10000);

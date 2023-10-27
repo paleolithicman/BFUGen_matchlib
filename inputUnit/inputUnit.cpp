@@ -29,7 +29,7 @@ void inputUnit::inputUnit_main() {
             } else if (cmd.ar_imm == 2) {
                 bt2 = cmd.ar_bits;
             }
-            wait();
+            bfu_out.write_last(tag, 0);
         } else {
             inputUnit_core();
         }
@@ -117,8 +117,7 @@ void inputUnit::inputUnit_core() {
                         hdr_count = 5;
                         if (header_3.field_0 != 0) {
                             // early exit
-                            wait();
-                            bfu_out.write(tag, bt1, 22, hdr_count, true);
+                            bfu_out.write(tag, bt1, 22, hdr_count, true, true);
                             return;
                         }
                     } else {
@@ -131,8 +130,7 @@ void inputUnit::inputUnit_core() {
         }
     } else if (eth.etherType == 0x800) {
         // early exit
-        wait();
-        bfu_out.write(tag, bt2, hdr_count, true);
+        bfu_out.write(tag, bt2, hdr_count, true, true);
         return;
     }
 
@@ -142,11 +140,11 @@ void inputUnit::inputUnit_core() {
     payload.empty = pkt_empty;
     payload.last = last_buf;
     pkt_buf_out.write(payload);
-    while (!last_buf) {
-        payload = stream_in.read();
-        last_buf = payload.last;
-        pkt_buf_out.write(payload);
-    }
-    bfu_out.write(tag, bt0, 22, hdr_count, true);
+    // while (!last_buf) {
+    //     payload = stream_in.read();
+    //     last_buf = payload.last;
+    //     pkt_buf_out.write(payload);
+    // }
+    bfu_out.write(tag, bt0, 22, hdr_count, true, false);
     // }
 }

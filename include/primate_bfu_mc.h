@@ -17,6 +17,7 @@ public:
         sc_uint<TAG_W>     tag;
         sc_uint<IP_W>      flag;
         bool               done;
+        bool               early;
         bool               wen0;
         sc_uint<ADDR_W>    addr0;
         sc_biguint<DATA_W> data0;
@@ -24,12 +25,12 @@ public:
         sc_uint<ADDR_W>    addr1;
         sc_biguint<DATA_W> data1;
 
-        static const unsigned int width = TAG_W+IP_W+ADDR_W*2+DATA_W*2+3;
+        static const unsigned int width = TAG_W+IP_W+ADDR_W*2+DATA_W*2+4;
 
-        payload_t(sc_uint<TAG_W> tag = 0, sc_uint<IP_W> flag = 0, bool done = false,
+        payload_t(sc_uint<TAG_W> tag = 0, sc_uint<IP_W> flag = 0, bool done = false, bool early = false,
             bool wen0 = false, sc_uint<ADDR_W> addr0 = 0, sc_biguint<DATA_W> data0 = 0,
             bool wen1 = false, sc_uint<ADDR_W> addr1 = 0, sc_biguint<DATA_W> data1 = 0) : 
-            tag(tag), flag(flag), done(done), wen0(wen0), addr0(addr0), 
+            tag(tag), flag(flag), done(done), early(early), wen0(wen0), addr0(addr0), 
             data0(data0), wen1(wen1), addr1(addr1), data1(data1) {}
 
         template <unsigned int Size>
@@ -37,6 +38,7 @@ public:
             m &tag;
             m &flag;
             m &done;
+            m &early;
             m &wen0;
             m &addr0;
             m &data0;
@@ -49,6 +51,7 @@ public:
             tag   = val.tag;
             flag  = val.flag;
             done  = val.done;
+            early = val.early;
             wen0  = val.wen0;
             addr0 = val.addr0;
             data0 = val.data0;
@@ -59,13 +62,13 @@ public:
         }
 
         bool operator== (const payload_t& val) const {
-            return ((tag == val.tag) && (flag == val.flag) && (done == val.done) &&
+            return ((tag == val.tag) && (flag == val.flag) && (done == val.done) && (early == val.early) &&
                 (wen0 == val.wen0) && (addr0 == val.addr0) && (data0 == val.data0) &&
                 (wen1 == val.wen1) && (addr1 == val.addr1) && (data1 == val.data1));
         }
 
         inline friend std::ostream& operator<<(std::ostream& os, const payload_t& val) {
-            os << "tag = " << val.tag << hex << "; flag = " << val.flag << "; done = " << val.done <<
+            os << "tag = " << val.tag << hex << "; flag = " << val.flag << "; done = " << val.done << "; early = " << val.early <<
                 "; wen0 = " << val.wen0 << "; addr0 = " << val.addr0 << "; data0 = " << val.data0 <<
                 "; wen1 = " << val.wen1 << "; addr1 = " << val.addr1 << "; data1 = " << val.data1 << dec << std::endl;
             return os;
@@ -75,6 +78,7 @@ public:
             sc_trace(f, val.tag, name + ".tag");
             sc_trace(f, val.flag, name + ".flag");
             sc_trace(f, val.done, name + ".done");
+            sc_trace(f, val.early, name + ".early");
             sc_trace(f, val.wen0, name + ".wen0");
             sc_trace(f, val.addr0, name + ".addr0");
             sc_trace(f, val.data0, name + ".data0");
@@ -113,6 +117,7 @@ public:
         bool write_last(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag) {
             payload_t tmp;
             tmp.done = true;
+            tmp.early = false;
             tmp.tag = out_tag;
             tmp.flag = out_flag;
             tmp.wen0 = false;
@@ -121,9 +126,10 @@ public:
         }
 
         void write(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag, sc_uint<ADDR_W> out_addr,
-         sc_biguint<DATA_W> out_data, bool is_last = false) {
+         sc_biguint<DATA_W> out_data, bool is_last = false, bool is_early = false) {
             payload_t tmp;
             tmp.done = is_last;
+            tmp.early = is_early;
             tmp.tag = out_tag;
             tmp.flag = out_flag;
             tmp.wen0 = true;
@@ -133,10 +139,11 @@ public:
             t.Push(tmp);
         }
 
-        void write(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag, sc_uint<ADDR_W> out_addr0,
-         sc_biguint<DATA_W> out_data0, sc_uint<ADDR_W> out_addr1, sc_biguint<DATA_W> out_data1, bool is_last = false) {
+        void write(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag, sc_uint<ADDR_W> out_addr0, sc_biguint<DATA_W> out_data0,
+         sc_uint<ADDR_W> out_addr1, sc_biguint<DATA_W> out_data1, bool is_last = false, bool is_early = false) {
             payload_t tmp;
             tmp.done = is_last;
+            tmp.early = is_early;
             tmp.tag = out_tag;
             tmp.flag = out_flag;
             tmp.wen0 = true;
@@ -196,36 +203,40 @@ public:
     struct payload_t {
         sc_uint<TAG_W>     tag;
         sc_uint<IP_W>      flag;
+        bool               early;
 
-        static const unsigned int width = TAG_W+IP_W;
+        static const unsigned int width = TAG_W+IP_W+1;
 
-        payload_t(sc_uint<TAG_W> tag = 0, sc_uint<IP_W> flag = 0) : 
-            tag(tag), flag(flag) {}
+        payload_t(sc_uint<TAG_W> tag = 0, sc_uint<IP_W> flag = 0, bool early = false) : 
+            tag(tag), flag(flag), early(early) {}
 
         template <unsigned int Size>
         void Marshall(Marshaller<Size> &m) {
             m &tag;
             m &flag;
+            m &early;
         }
 
         payload_t& operator= (const payload_t& val) {
             tag   = val.tag;
             flag  = val.flag;
+            early = val.early;
             return (*this);
         }
 
         bool operator== (const payload_t& val) const {
-            return ((tag == val.tag) && (flag == val.flag));
+            return ((tag == val.tag) && (flag == val.flag) && (early == val.early));
         }
 
         inline friend std::ostream& operator<<(std::ostream& os, const payload_t& val) {
-            os << "tag = " << val.tag << hex << "; flag = " << val.flag << dec << std::endl;
+            os << "tag = " << val.tag << hex << "; flag = " << val.flag << "; early = " << val.early << dec << std::endl;
             return os;
         }
 
         inline friend void sc_trace(sc_trace_file*& f, const payload_t& val, std::string name) {
             sc_trace(f, val.tag, name + ".tag");
             sc_trace(f, val.flag, name + ".flag");
+            sc_trace(f, val.early, name + ".early");
         }
     };
 
@@ -255,10 +266,11 @@ public:
             t.Reset();
         }
 
-        bool write(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag) {
+        bool write(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag, bool is_early = false) {
             payload_t tmp;
             tmp.tag = out_tag;
             tmp.flag = out_flag;
+            tmp.early = is_early;
             return t.PushNB(tmp);
         }
 
@@ -282,11 +294,12 @@ public:
             t.Reset();
         }
 
-        bool read(sc_uint<TAG_W> &out_tag, sc_uint<IP_W> &out_flag) {
+        bool read(sc_uint<TAG_W> &out_tag, sc_uint<IP_W> &out_flag, bool &is_early) {
             payload_t tmp;
             if (t.PopNB(tmp)) {
                 out_tag = tmp.tag;
                 out_flag = tmp.flag;
+                is_early = tmp.early;
                 return true;
             } else {
                 return false;

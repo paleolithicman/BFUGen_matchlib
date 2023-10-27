@@ -3,12 +3,13 @@
 void outputUnit::outputUnit_cmd() {
     sc_uint<1> state;
     primate_ctrl_ou::cmd_t cmd;
+    sc_uint<OPCODE_WIDTH> opcode;
 
     // initialize handshake
     cmd_in.reset();
     state = 0;
-    // init_done = false;
-    // init_tag = 0;
+    init_done = false;
+    init_tag = 0;
     for (int i = 0; i < NUM_THREADS; i++) {
         hdr_done[i].write(0);
         hdr_arg[i].write(0);
@@ -24,11 +25,10 @@ void outputUnit::outputUnit_cmd() {
             hdr_done[done_tag.read()].write(0);
         }
         bool cmd_vld = cmd_in.nb_read(cmd);
-        // init_done = false;
+        if (init_wb.read()) init_done = false;
         if (cmd_vld) {
-            std::cout << "got valid cmd\n";
             opcode = cmd.ar_opcode;
-            if (opcode.read() == 0x3f) {
+            if (opcode == 0x3f) {
                 if (cmd.ar_imm == 0) {
                     bt0 = cmd.ar_bits;
                 } else if (cmd.ar_imm == 1) {
@@ -36,10 +36,9 @@ void outputUnit::outputUnit_cmd() {
                 } else if (cmd.ar_imm == 2) {
                     bt2 = cmd.ar_bits;
                 }
-                // init_done = true;
-                // init_tag = cmd.ar_tag;
+                init_done = true;
+                init_tag = cmd.ar_tag;
             } else {
-                std::cout << sc_time_stamp() << ": write tag " << cmd.ar_tag << "\n";
                 hdr_arg[cmd.ar_tag].write(cmd.ar_bits);
                 hdr_done[cmd.ar_tag].write(1);
             }
@@ -65,11 +64,9 @@ void outputUnit::outputUnit_req() {
         //     cout << sc_time_stamp() << ": req state" << state << endl;
         if (state == 0) {
             pkt_in = pkt_buf_in.read();
-            std::cout << sc_time_stamp() << ": got valid pkt_in " << pkt_in.tag << "\n";
             while (hdr_done[pkt_in.tag].read() != 1) {
                 wait();
             }
-            std::cout << sc_time_stamp() << ": pkt in is done\n";
             tag = pkt_in.tag;
             arg.set(hdr_arg[pkt_in.tag]);
             req_rsp_fifo.write(tag);
@@ -77,7 +74,6 @@ void outputUnit::outputUnit_req() {
             wait();
         } else {
             state = 0;
-            std::cout << sc_time_stamp() << ": req arg " << arg.hdr_count << ", " << tag << "\n";
             outputUnit_req_core(arg.hdr_count, tag);
         }
     }
@@ -109,6 +105,7 @@ void outputUnit::outputUnit_rsp() {
     sc_uint<4> state;
     arg_t arg;
     sc_uint<NUM_THREADS_LG> tag;
+    init_wb = false;
 
     bfu_rdrsp.reset();
     stream_out.reset();
@@ -123,20 +120,23 @@ void outputUnit::outputUnit_rsp() {
         // cout << sc_time_stamp() << ": rsp state" << state << endl;
         if (state == 0) {
             done = false;
-            // if (init_done.read()) {
-                // bfu_out.write(init_tag, 0);
-            // } else {
+            if (!init_done.read()) init_wb = false;
+            if (init_done.read()) {
+                init_wb = true;
+                bfu_out.write(init_tag, 0);
+            } else {
             // if (hdr_done[tag].read() == 1) {
-                req_rsp_fifo.read(tag);
-                arg.set(hdr_arg[tag]);
-                state = 1;
-            // }
+                bool fifo_v = req_rsp_fifo.nb_read(tag);
+                if (fifo_v) {
+                    arg.set(hdr_arg[tag]);
+                    state = 1;
+                }
+            }
             wait();
         } else {
             state = 0;
             done = true;
             done_tag = tag;
-            std::cout << sc_time_stamp() << ": rsp arg " << arg.hdr_count << ", " << tag << "\n";
             outputUnit_rsp_core(arg.hdr_count, tag);
         }
     }
@@ -171,7 +171,7 @@ inline void outputUnit::outputUnit_rsp_core(sc_biguint<32> hdr_count, sc_uint<NU
                         empty = 38;
                         if (hdr_count > 5) {
                             stream_out.write(primate_io_payload_t(out_buf, tag, empty, false));
-                            bfu_out.write(tag, bt1.read());
+                            bfu_out.write(tag, bt1.read(), true);
                             return;
                         }
                     } else {
@@ -191,12 +191,11 @@ inline void outputUnit::outputUnit_rsp_core(sc_biguint<32> hdr_count, sc_uint<NU
         }
     } else {
         stream_out.write(primate_io_payload_t(out_buf, tag, empty, false));
-        bfu_out.write(tag, bt2.read());
+        bfu_out.write(tag, bt2.read(), true);
         return;
     }
 
     stream_out.write(primate_io_payload_t(out_buf, tag, empty, false));
-    std::cout << "write results out\n";
     // do {
     //     pkt_in = pkt_buf_in.read();
     //     stream_out.write(pkt_in);

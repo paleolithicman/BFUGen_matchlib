@@ -66,7 +66,6 @@ SC_MODULE(outputUnit) {
     sc_in<bool> i_clk;
     sc_in<bool> i_rst;
 
-    sc_signal<sc_uint<OPCODE_WIDTH>> opcode;
     sc_signal<sc_uint<IP_WIDTH>> bt0;
     sc_signal<sc_uint<IP_WIDTH>> bt1;
     sc_signal<sc_uint<IP_WIDTH>> bt2;
@@ -83,6 +82,7 @@ SC_MODULE(outputUnit) {
     primate_stream_512_4::slave<>     CCS_INIT_S1(pkt_buf_in);
 
     sc_signal<bool> init_done;
+    sc_signal<bool> init_wb;
     sc_signal<sc_uint<NUM_THREADS_LG>> init_tag;
     sc_signal<bool> done;
     sc_signal<sc_uint<NUM_THREADS_LG>> done_tag;

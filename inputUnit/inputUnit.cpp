@@ -98,7 +98,7 @@ void inputUnit::inputUnit_core() {
                 pkt_data_buf = payload.data.range(511, 80);
                 // }
                 hdr_count = 3;
-                bfu_out.write(tag, bt0, 3, header_0.to_uint(), 4, header_1.to_uint());
+                bfu_out.write(tag, bt0, 4, header_0.to_uint(), 5, header_1.to_uint());
                 if (header_1.field_0 != 0) {
                     // Input_header<header_t>(8, header_2); {
                     header_2.set(in_data_buf.range(143, 80));
@@ -113,15 +113,47 @@ void inputUnit::inputUnit_core() {
                         pkt_empty = 26;
                         pkt_data_buf = payload.data.range(511, 208);
                         // }
-                        bfu_out.write(tag, bt0, 5, header_2.to_uint(), 6, header_3.to_uint());
+                        bfu_out.write(tag, bt0, 6, header_2.to_uint(), 7, header_3.to_uint());
                         hdr_count = 5;
                         if (header_3.field_0 != 0) {
-                            // early exit
-                            bfu_out.write(tag, bt1, 22, hdr_count, true, true);
-                            return;
+                            header_4.set(in_data_buf.range(271, 208));
+                            pkt_empty = 34;
+                            pkt_data_buf = payload.data.range(511, 272);
+                            hdr_count = 6;
+                            if (header_4.field_0 != 0) {
+                                header_5.set(in_data_buf.range(335, 272));
+                                pkt_empty = 42;
+                                pkt_data_buf = payload.data.range(511, 336);
+                                bfu_out.write(tag, bt0, 8, header_4.to_uint(), 9, header_5.to_uint());
+                                hdr_count = 7;
+                                if (header_5.field_0 != 0) {
+                                    header_6.set(in_data_buf.range(399, 336));
+                                    pkt_empty = 50;
+                                    pkt_data_buf = payload.data.range(511, 400);
+                                    hdr_count = 8;
+                                    if (header_6.field_0 != 0) {
+                                        header_7.set(in_data_buf.range(479, 400));
+                                        pkt_empty = 58;
+                                        pkt_data_buf = payload.data.range(511, 480);
+                                        bfu_out.write(tag, bt0, 10, header_6.to_uint(), 11, header_7.to_uint());
+                                        hdr_count = 9;
+                                        if (header_7.field_0 != 0) {
+                                            payload.data = pkt_data_buf;
+                                            payload.empty = pkt_empty;
+                                            payload.last = last_buf;
+                                            pkt_buf_out.write(payload);
+                                            bfu_out.write(tag, bt1, 22, hdr_count, true, true);
+                                        }
+                                    } else {
+                                        bfu_out.write(tag, bt0, 10, header_6.to_uint());
+                                    }
+                                }
+                            } else {
+                                bfu_out.write(tag, bt0, 8, header_4.to_uint());
+                            }
                         }
                     } else {
-                        bfu_out.write(tag, bt0, 5, header_2.to_uint());
+                        bfu_out.write(tag, bt0, 6, header_2.to_uint());
                     }
                 }
             } else {

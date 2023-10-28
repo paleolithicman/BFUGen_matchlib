@@ -90,6 +90,20 @@ inline void outputUnit::outputUnit_req_core(sc_biguint<32> hdr_count, sc_uint<NU
                 if (hdr_count > 3) {
                     if (hdr_count > 4) {
                         bfu_rdreq.write(primate_bfu_req_t(tag, 6, 7));
+                        if (hdr_count > 5) {
+                            if (hdr_count > 6) {
+                                bfu_rdreq.write(primate_bfu_req_t(tag, 8, 9));
+                                if (hdr_count > 7) {
+                                    if (hdr_count > 8) {
+                                        bfu_rdreq.write(primate_bfu_req_t(tag, 10, 11));
+                                    } else {
+                                        bfu_rdreq.write(primate_bfu_req_t(tag, 10, 10));
+                                    }
+                                }
+                            } else {
+                                bfu_rdreq.write(primate_bfu_req_t(tag, 8, 8));
+                            }
+                        }
                     } else {
                         bfu_rdreq.write(primate_bfu_req_t(tag, 6, 6));
                     }
@@ -170,9 +184,32 @@ inline void outputUnit::outputUnit_rsp_core(sc_biguint<32> hdr_count, sc_uint<NU
                         out_buf = (hdr_data.data1.range(63, 0), hdr_data.data0.range(63, 0), out_buf.range(79, 0));
                         empty = 38;
                         if (hdr_count > 5) {
-                            stream_out.write(primate_io_payload_t(out_buf, tag, empty, false));
-                            bfu_out.write(tag, bt1.read(), true);
-                            return;
+                            if (hdr_count > 6) {
+                                hdr_data = bfu_rdrsp.read();
+                                out_buf = (hdr_data.data1.range(63, 0), hdr_data.data0.range(63, 0), out_buf.range(207, 0));
+                                empty = 24;
+                                if (hdr_count > 7) {
+                                    if (hdr_count > 8) {
+                                        hdr_data = bfu_rdrsp.read();
+                                        out_buf = (hdr_data.data1.range(63, 0), hdr_data.data0.range(63, 0), out_buf.range(335, 0));
+                                        empty = 8;
+                                    } else {
+                                        hdr_data = bfu_rdrsp.read();
+                                        out_buf = (hdr_data.data0.range(63, 0), out_buf.range(335, 0));
+                                        empty = 16;
+                                        if (hdr_count > 9) {
+                                            stream_out.write(primate_io_payload_t(out_buf, tag, empty, false));
+                                            bfu_out.write(tag, bt1.read(), true);
+                                            return;
+                                        }
+                                    }
+                                }
+                            } else {
+                                hdr_data = bfu_rdrsp.read();
+                                out_buf = (hdr_data.data0.range(63, 0), out_buf.range(207, 0));
+                                empty = 30;
+                            }
+
                         }
                     } else {
                         hdr_data = bfu_rdrsp.read();

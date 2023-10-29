@@ -1,6 +1,7 @@
 #ifndef _PRIMATE_STREAM_
 #define _PRIMATE_STREAM_
 
+#include <cmath>
 #include <systemc.h>
 #include <string>
 #include <mc_connections.h>
@@ -13,7 +14,7 @@ public:
     enum {
         DATA_WIDTH = Cfg::dataWidth,
         NUM_THREADS_LG = Cfg::numThreadsLG,
-        EMPTY_WIDTH = (DATA_WIDTH >> 3),
+        EMPTY_WIDTH = (int)std::ceil(std::log2(DATA_WIDTH >> 3)),
     };
     typedef typename Cfg::Data_t Data;
 

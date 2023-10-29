@@ -14,7 +14,7 @@ public:
     enum {
         DATA_WIDTH = Cfg::dataWidth,
         NUM_THREADS_LG = Cfg::numThreadsLG,
-        EMPTY_WIDTH = (int)std::ceil(std::log2(DATA_WIDTH >> 3)),
+        EMPTY_WIDTH = Cfg::emptyWidth,
     };
     typedef typename Cfg::Data_t Data;
 
@@ -184,18 +184,19 @@ public:
     }; // class slave
 }; // class primate_stream
 
-template <int DW, int NTLG>
+template <int DW, int EW, int NTLG>
 struct cfg_biguint {
 
   typedef sc_biguint<DW> Data_t;
 
   enum {
     dataWidth = DW,
+    emptyWidth = EW,
     numThreadsLG = NTLG,
   };
 
 };
-typedef primate_stream<cfg_biguint<512, 4>> primate_stream_512_4;
+typedef primate_stream<cfg_biguint<512, 6, 4>> primate_stream_512_4;
 
 
 #endif

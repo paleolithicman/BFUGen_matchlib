@@ -114,7 +114,7 @@ public:
             t.Reset();
         }
 
-        bool write_last(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag) {
+        void write_last(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag) {
             payload_t tmp;
             tmp.done = true;
             tmp.early = false;
@@ -122,7 +122,7 @@ public:
             tmp.flag = out_flag;
             tmp.wen0 = false;
             tmp.wen1 = false;
-            return t.PushNB(tmp);
+            t.Push(tmp);
         }
 
         void write(sc_uint<TAG_W> out_tag, sc_uint<IP_W> out_flag, sc_uint<ADDR_W> out_addr,

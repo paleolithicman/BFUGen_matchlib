@@ -6,6 +6,7 @@ void inputUnit::inputUnit_main() {
     // initialize handshake
     bt0 = 0;
     bt1 = 0;
+    bt2 = 0;
     stream_in.reset();
     cmd_in.reset();
     pkt_buf_out.reset();
@@ -25,6 +26,8 @@ void inputUnit::inputUnit_main() {
                 bt0 = cmd.ar_bits;
             } else if (cmd.ar_imm == 1) {
                 bt1 = cmd.ar_bits;
+            } else if (cmd.ar_imm == 2) {
+                bt2 = cmd.ar_bits;
             }
             bfu_out.write_last(tag, 0);
         } else {
@@ -59,6 +62,7 @@ void inputUnit::inputUnit_core() {
     eth.set(payload.data.range(111, 0));
     pkt_empty = 14;
     pkt_data_buf = payload.data.range(511, 112);
+    bfu_out.write(tag, bt0, 1, eth.to_uint());
     // }
     if (eth.etherType == 0x88f7) {
         // Input_header<ptp_l_t>(20, ptp_l); {
@@ -71,6 +75,7 @@ void inputUnit::inputUnit_core() {
         pkt_data_buf = payload.data.range(511, 464);
         // }
         hdr_count = 1;
+        bfu_out.write(tag, bt0, 2, ptp_l.to_uint(), 3, ptp_h.to_uint());
         if (ptp_l.reserved2 == 1) {
             // Input_header<header_t>(8, header_0); {
             payload = stream_in.read();
@@ -83,12 +88,14 @@ void inputUnit::inputUnit_core() {
             hdr_count = 2;
             if (header_0.hdr0.field_0 != 0) {
                 // Input_header<header_t>(8, header_1); {
+                std::cout << "input header 0\n";
                 header_0.hdr1.set(in_data_buf.range(79, 16));
                 pkt_empty = 10;
                 pkt_data_buf = in_data_buf.range(511, 80);
                 // }
                 hdr_count = 3;
                 if (header_0.hdr1.field_0 != 0) {
+                    std::cout << "input header 1\n";
                     header_1.hdr0.set(in_data_buf.range(143, 80));
                     pkt_empty = 18;
                     pkt_data_buf = in_data_buf.range(511, 144);
@@ -100,6 +107,7 @@ void inputUnit::inputUnit_core() {
                         pkt_empty = 26;
                         pkt_data_buf = in_data_buf.range(511, 208);
                         // }
+                        bfu_out.write(tag, bt0, 4, header_1.to_uint(), 5, header_0.to_uint());
                         hdr_count = 5;
                         if (header_1.hdr1.field_0 != 0) {
                             header_2.hdr0.set(in_data_buf.range(271, 208));
@@ -117,21 +125,42 @@ void inputUnit::inputUnit_core() {
                                     pkt_data_buf = in_data_buf.range(511, 400);
                                     hdr_count = 8;
                                     if (header_3.hdr0.field_0 != 0) {
-                                        header_3.hdr1.set(in_data_buf.range(463, 400));
+                                        header_3.hdr1.set(in_data_buf.range(479, 400));
                                         pkt_empty = 58;
-                                        pkt_data_buf = in_data_buf.range(511, 464);
+                                        pkt_data_buf = in_data_buf.range(511, 480);
+                                        bfu_out.write(tag, bt0, 6, header_2.to_uint(), 7, header_3.to_uint());
                                         hdr_count = 9;
+                                        if (header_3.hdr1.field_0 != 0) {
+                                            payload.data = pkt_data_buf;
+                                            payload.empty = pkt_empty;
+                                            payload.last = last_buf;
+                                            pkt_buf_out.write(payload);
+                                            bfu_out.write(tag, bt1, 22, hdr_count, true, true);
+                                            return;
+                                        }
+                                    } else {
+                                        bfu_out.write(tag, bt0, 6, header_2.to_uint(), 7, header_3.to_uint());
                                     }
+                                } else {
+                                    bfu_out.write(tag, bt0, 6, header_2.to_uint());
                                 }
+                            } else {
+                                bfu_out.write(tag, bt0, 6, header_2.to_uint());
                             }
                         }
+                    } else {
+                        bfu_out.write(tag, bt0, 4, header_0.to_uint(), 5, header_1.to_uint());
                     }
+                } else {
+                    bfu_out.write(tag, bt0, 4, header_0.to_uint());
                 }
+            } else {
+                bfu_out.write(tag, bt0, 4, header_0.to_uint());
             }
         }
     } else if (eth.etherType == 0x800) {
         // early exit
-        bfu_out.write(tag, bt1, 1, eth.to_uint(), 22, hdr_count, true, true);
+        bfu_out.write(tag, bt2, hdr_count, true, true);
         return;
     }
 
@@ -146,9 +175,6 @@ void inputUnit::inputUnit_core() {
     //     last_buf = payload.last;
     //     pkt_buf_out.write(payload);
     // }
-    bfu_out.write(tag, bt0, 1, eth.to_uint(), 22, hdr_count);
-    bfu_out.write(tag, bt0, 2, ptp_l.to_uint(), 3, ptp_h.to_uint());
-    bfu_out.write(tag, bt0, 4, header_1.to_uint(), 5, header_0.to_uint());
-    bfu_out.write(tag, bt0, 6, header_2.to_uint(), 7, header_3.to_uint(), true, false);
+    bfu_out.write(tag, bt0, 22, hdr_count, true, false);
     // }
 }

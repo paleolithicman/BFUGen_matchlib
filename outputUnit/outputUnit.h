@@ -68,7 +68,6 @@ SC_MODULE(outputUnit) {
 
     sc_signal<sc_uint<IP_WIDTH>> bt0;
     sc_signal<sc_uint<IP_WIDTH>> bt1;
-    sc_signal<sc_uint<IP_WIDTH>> bt2;
 
     primate_stream_512_4::master<>    CCS_INIT_S1(stream_out);
 

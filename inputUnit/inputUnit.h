@@ -66,6 +66,23 @@ typedef struct {
 } header_t;
 
 typedef struct {
+    header_t hdr0;
+    header_t hdr1;
+
+    void set(sc_biguint<128> bv) {
+        hdr0.set(bv.range(63, 0));
+        hdr1.set(bv.range(127, 64));
+    }
+
+    sc_biguint<REG_WIDTH> to_uint() {
+        sc_biguint<64> hdr0_uint = hdr0.to_uint();
+        sc_biguint<64> hdr1_uint = hdr1.to_uint();
+        sc_biguint<REG_WIDTH> val = (0, hdr1_uint, hdr0_uint);
+        return val;
+    }
+} header2_t;
+
+typedef struct {
     sc_biguint<72> version_ttl;
     sc_biguint<8> protocol;
     sc_biguint<80> hdrChecksum_dstAddr;
@@ -129,7 +146,6 @@ SC_MODULE(inputUnit) {
     sc_uint<OPCODE_WIDTH> opcode;
     sc_uint<IP_WIDTH> bt0;
     sc_uint<IP_WIDTH> bt1;
-    sc_uint<IP_WIDTH> bt2;
 
     primate_stream_512_4::slave<>     CCS_INIT_S1(stream_in);
 

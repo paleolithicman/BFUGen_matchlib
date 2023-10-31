@@ -141,11 +141,12 @@ void inputUnit::inputUnit_core() {
     payload.empty = pkt_empty;
     payload.last = last_buf;
     pkt_buf_out.write(payload);
-    // while (!last_buf) {
-    //     payload = stream_in.read();
-    //     last_buf = payload.last;
-    //     pkt_buf_out.write(payload);
-    // }
+#pragma hls_pipeline_init_interval 1
+    while (!last_buf) {
+        payload = stream_in.read();
+        last_buf = payload.last;
+        pkt_buf_out.write(payload);
+    }
     bfu_out.write(tag, bt0, 1, eth.to_uint(), 22, hdr_count);
     bfu_out.write(tag, bt0, 2, ptp_l.to_uint(), 3, ptp_h.to_uint());
     bfu_out.write(tag, bt0, 4, header_0.to_uint(), 5, header_1.to_uint());

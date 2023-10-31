@@ -1,6 +1,6 @@
 #include "outputUnit.h"
 #include <map>
-#define EMPTY 26
+#define EMPTY 58
 #define HDR_COUNT 9
 #define NUM_PKT 2
 using namespace std;
@@ -120,8 +120,8 @@ public:
             primate_ctrl_ou::cmd_t cmd(i, 4, 1, HDR_COUNT, 0);
             cmd_out.write(cmd);
 
-            // pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[0]), i, EMPTY, 0));
-            // pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[1]), i, 0, 0));
+            pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[0]), i, EMPTY, 0));
+            pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[1]), i, 0, 0));
             pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[2]), i, 0, 1));
 
             bool done = false;
@@ -160,13 +160,13 @@ public:
         stream_in.reset();
         wait();
 
-        // for (int i = 0; i < NUM_PKT; i++) {
-            // outfile << "Packet " << i << ":" << endl;
+        for (int i = 0; i < NUM_PKT; i++) {
+            outfile << "Packet " << i << ":" << endl;
             do {
                 out_data = stream_in.read();
                 outfile << out_data;
             } while (true);
-        // }
+        }
 
         // sc_stop();
     }

@@ -50,9 +50,10 @@ void outputUnit::outputUnit_req() {
     sc_uint<NUM_THREADS_LG> tag;
     primate_stream_512_4::payload_t pkt_in;
 
-    pkt_buf_in.reset();
     bfu_rdreq.reset();
     state = 0;
+    done = 0;
+    done_tag = 0;
 
     wait();
 
@@ -60,10 +61,11 @@ void outputUnit::outputUnit_req() {
         // if (state != 0)
         //     cout << sc_time_stamp() << ": req state" << state << endl;
         if (state == 0) {
-            pkt_in = pkt_buf_in.read();
-            while (hdr_done[pkt_in.tag].read() != 1) {
+            done = false;
+            do {
+                pkt_in = pkt_buf_in.peek();
                 wait();
-            }
+            } while (hdr_done[pkt_in.tag].read() != 1);
             tag = pkt_in.tag;
             arg.set(hdr_arg[pkt_in.tag]);
             req_rsp_fifo.write(tag);
@@ -71,6 +73,8 @@ void outputUnit::outputUnit_req() {
             wait();
         } else {
             state = 0;
+            done = true;
+            done_tag = tag;
             outputUnit_req_core(arg.hdr_count, tag);
         }
     }
@@ -121,18 +125,16 @@ void outputUnit::outputUnit_rsp() {
     init_wb = false;
 
     bfu_rdrsp.reset();
+    pkt_buf_in.reset();
     stream_out.reset();
     bfu_out.reset();
     state = 0;
-    done = 0;
-    done_tag = 0;
 
     wait();
 
     while (true) {
         // cout << sc_time_stamp() << ": rsp state" << state << endl;
         if (state == 0) {
-            done = false;
             if (!init_done.read()) init_wb = false;
             if (init_done.read()) {
                 init_wb = true;
@@ -148,8 +150,6 @@ void outputUnit::outputUnit_rsp() {
             wait();
         } else {
             state = 0;
-            done = true;
-            done_tag = tag;
             outputUnit_rsp_core(arg.hdr_count, tag);
         }
     }
@@ -160,7 +160,7 @@ inline void outputUnit::outputUnit_rsp_core(sc_biguint<32> hdr_count, sc_uint<NU
     sc_biguint<512> out_buf;
     sc_uint<8> empty;
     primate_bfu_rsp_t hdr_data;
-    // primate_stream_512_4::payload_t pkt_in;
+    primate_stream_512_4::payload_t pkt_in;
 
     hdr_data = bfu_rdrsp.read();
     out_buf = hdr_data.data0.range(111, 0);
@@ -235,9 +235,9 @@ inline void outputUnit::outputUnit_rsp_core(sc_biguint<32> hdr_count, sc_uint<NU
     }
 
     stream_out.write(primate_io_payload_t(out_buf, tag, empty, false));
-    // do {
-    //     pkt_in = pkt_buf_in.read();
-    //     stream_out.write(pkt_in);
-    // } while (!pkt_in.last);
+    do {
+        pkt_in = pkt_buf_in.read();
+        stream_out.write(pkt_in);
+    } while (!pkt_in.last);
     bfu_out.write(tag, bt0.read());
 }

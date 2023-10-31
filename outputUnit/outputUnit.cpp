@@ -50,6 +50,7 @@ void outputUnit::outputUnit_req() {
     sc_uint<NUM_THREADS_LG> tag;
     primate_stream_512_4::payload_t pkt_in;
 
+    pkt_buf_in.reset();
     bfu_rdreq.reset();
     state = 0;
     done = 0;
@@ -66,6 +67,7 @@ void outputUnit::outputUnit_req() {
                 pkt_in = pkt_buf_in.peek();
                 wait();
             } while (hdr_done[pkt_in.tag].read() != 1);
+            std::cout << "tag " << pkt_in.tag << " valid\n";
             tag = pkt_in.tag;
             arg.set(hdr_arg[pkt_in.tag]);
             req_rsp_fifo.write(tag);
@@ -116,6 +118,7 @@ inline void outputUnit::outputUnit_req_core(sc_biguint<32> hdr_count, sc_uint<NU
             }
         }
     }
+    std::cout << "request sent, hdr_count " << hdr_count << ", tag " << tag << "\n";
 }
 
 void outputUnit::outputUnit_rsp() {
@@ -125,7 +128,7 @@ void outputUnit::outputUnit_rsp() {
     init_wb = false;
 
     bfu_rdrsp.reset();
-    pkt_buf_in.reset();
+    // pkt_buf_in.reset();
     stream_out.reset();
     bfu_out.reset();
     state = 0;
@@ -160,7 +163,8 @@ inline void outputUnit::outputUnit_rsp_core(sc_biguint<32> hdr_count, sc_uint<NU
     sc_biguint<512> out_buf;
     sc_uint<8> empty;
     primate_bfu_rsp_t hdr_data;
-    primate_stream_512_4::payload_t pkt_in;
+    // primate_stream_512_4::payload_t pkt_in;
+    std::cout << "rsp start, hdr_count " << hdr_count << ", tag " << tag << "\n" ;
 
     hdr_data = bfu_rdrsp.read();
     out_buf = hdr_data.data0.range(111, 0);
@@ -235,9 +239,10 @@ inline void outputUnit::outputUnit_rsp_core(sc_biguint<32> hdr_count, sc_uint<NU
     }
 
     stream_out.write(primate_io_payload_t(out_buf, tag, empty, false));
-    do {
-        pkt_in = pkt_buf_in.read();
-        stream_out.write(pkt_in);
-    } while (!pkt_in.last);
+// #pragma hls_pipeline_init_interval 1
+//     do {
+//         pkt_in = pkt_buf_in.read();
+//         stream_out.write(pkt_in);
+//     } while (!pkt_in.last);
     bfu_out.write(tag, bt0.read());
 }

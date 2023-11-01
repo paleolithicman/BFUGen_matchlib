@@ -15,7 +15,7 @@
 #define OPCODE_WIDTH 6
 #define IP_WIDTH 32
 
-typedef primate_ctrl<NUM_THREADS_LG, OPCODE_WIDTH, NUM_REGS_LG, 32> primate_ctrl_ou;
+typedef primate_ctrl_simple<NUM_THREADS_LG, 32> primate_ctrl_ou;
 typedef primate_bfu_mc::write_mc<NUM_THREADS_LG, IP_WIDTH, NUM_REGS_LG, REG_WIDTH> primate_bfu_iu;
 typedef primate_bfu_mc::out_simple<NUM_THREADS_LG, IP_WIDTH> primate_bfu_ou;
 typedef primate_bfu_mc::read_mc::req<NUM_THREADS_LG, NUM_REGS_LG> primate_bfu_rdreq_ou;

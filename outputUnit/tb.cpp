@@ -82,9 +82,12 @@ SC_MODULE(source) {
 public:
     sc_in<bool>                      i_clk;
     sc_out<bool>                     i_rst;
+
+    sc_out<sc_uint<IP_WIDTH>>        bt0;
+    sc_out<sc_uint<IP_WIDTH>>        bt1;
     
     primate_ctrl_ou::master<>        cmd_out;
-    primate_stream_512_4::master<>   pkt_buf_out;
+    // primate_stream_512_4::master<>   pkt_buf_out;
     primate_bfu_ou::slave<>          bfu_in;
 
     SC_HAS_PROCESS(source);
@@ -106,9 +109,11 @@ public:
         sc_uint<IP_WIDTH> flag;
         bool early;
         // Reset
+        bt0 = 0;
+        bt1 = 32;
         cmd_out.reset();
         bfu_in.reset();
-        pkt_buf_out.reset();
+        // pkt_buf_out.reset();
 
         wait();
 
@@ -117,12 +122,12 @@ public:
             cout << "packet " << i << endl;
             // start_time[i] = sc_time_stamp();
 
-            primate_ctrl_ou::cmd_t cmd(i, 4, 1, HDR_COUNT, 0);
+            primate_ctrl_ou::cmd_t cmd(i, HDR_COUNT);
             cmd_out.write(cmd);
 
             // pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[0]), i, EMPTY, 0));
             // pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[1]), i, 0, 0));
-            pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[2]), i, 0, 1));
+            // pkt_buf_out.write(primate_io_payload_t(str2biguint512(pkt_data[2]), i, 0, 1));
 
             bool done = false;
             do {
@@ -184,10 +189,12 @@ public:
     sc_signal<bool> rst_sig;
     sc_clock        clk_sig;
 
+    sc_signal<sc_uint<IP_WIDTH>>        bt0;
+    sc_signal<sc_uint<IP_WIDTH>>        bt1;
     primate_stream_512_4::chan<>        dut_to_tb_data;
     primate_ctrl_ou::chan<>             tb_to_dut_ctrl;
     primate_bfu_ou::chan<>              dut_to_tb_ctrl;
-    primate_stream_512_4::chan<>        pkt_buf;
+    // primate_stream_512_4::chan<>        pkt_buf;
     primate_bfu_rdreq_ou::chan<>        bfu_rdreq;
     primate_bfu_rdrsp_ou::chan<>        bfu_rdrsp;
 
@@ -196,7 +203,9 @@ public:
         source_inst->i_clk(clk_sig);
         source_inst->i_rst(rst_sig);
         source_inst->cmd_out(tb_to_dut_ctrl);
-        source_inst->pkt_buf_out(pkt_buf);
+        source_inst->bt0(bt0);
+        source_inst->bt1(bt1);
+        // source_inst->pkt_buf_out(pkt_buf);
         source_inst->bfu_in(dut_to_tb_ctrl);
 
         sink_inst = new sink("sink_inst");
@@ -213,12 +222,14 @@ public:
         outputUnit_inst = new outputUnit("outputUnit_inst");
         outputUnit_inst->i_clk(clk_sig);
         outputUnit_inst->i_rst(rst_sig);
+        outputUnit_inst->bt0(bt0);
+        outputUnit_inst->bt1(bt1);
         outputUnit_inst->stream_out(dut_to_tb_data);
         outputUnit_inst->cmd_in(tb_to_dut_ctrl);
         outputUnit_inst->bfu_out(dut_to_tb_ctrl);
         outputUnit_inst->bfu_rdreq(bfu_rdreq);
         outputUnit_inst->bfu_rdrsp(bfu_rdrsp);
-        outputUnit_inst->pkt_buf_in(pkt_buf);
+        // outputUnit_inst->pkt_buf_in(pkt_buf);
     }
 
     ~tb() {

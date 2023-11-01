@@ -1,60 +1,14 @@
 #include "outputUnit.h"
 
-void outputUnit::outputUnit_cmd() {
-    sc_uint<1> state;
-    primate_ctrl_ou::cmd_t cmd;
-    sc_uint<OPCODE_WIDTH> opcode;
-
-    // initialize handshake
-    cmd_in.reset();
-    state = 0;
-    init_done = false;
-    init_tag = 0;
-    for (int i = 0; i < NUM_THREADS; i++) {
-        hdr_done[i].write(0);
-        hdr_arg[i].write(0);
-    }
-    bt0 = 0;
-    bt1 = 0;
-    
-    wait();
-
-    while (true) {
-        if (done) {
-            hdr_done[done_tag.read()].write(0);
-        }
-        bool cmd_vld = cmd_in.nb_read(cmd);
-        if (init_wb.read()) init_done = false;
-        if (cmd_vld) {
-            opcode = cmd.ar_opcode;
-            if (opcode == 0x3f) {
-                if (cmd.ar_imm == 0) {
-                    bt0 = cmd.ar_bits;
-                } else if (cmd.ar_imm == 1) {
-                    bt1 = cmd.ar_bits;
-                }
-                init_done = true;
-                init_tag = cmd.ar_tag;
-            } else {
-                hdr_arg[cmd.ar_tag].write(cmd.ar_bits);
-                hdr_done[cmd.ar_tag].write(1);
-            }
-        }
-        wait();
-    }
-}
-
 void outputUnit::outputUnit_req() {
     sc_uint<4> state;
     arg_t arg;
     sc_uint<NUM_THREADS_LG> tag;
-    primate_stream_512_4::payload_t pkt_in;
+    primate_ctrl_ou::cmd_t cmd;
 
-    pkt_buf_in.reset();
     bfu_rdreq.reset();
+    cmd_in.reset();
     state = 0;
-    done = 0;
-    done_tag = 0;
 
     wait();
 
@@ -62,21 +16,14 @@ void outputUnit::outputUnit_req() {
         // if (state != 0)
         //     cout << sc_time_stamp() << ": req state" << state << endl;
         if (state == 0) {
-            done = false;
-            do {
-                pkt_in = pkt_buf_in.peek();
-                wait();
-            } while (hdr_done[pkt_in.tag].read() != 1);
-            std::cout << "tag " << pkt_in.tag << " valid\n";
-            tag = pkt_in.tag;
-            arg.set(hdr_arg[pkt_in.tag]);
-            req_rsp_fifo.write(tag);
+            cmd = cmd_in.read();
+            tag = cmd.ar_tag;
+            arg.set(cmd.ar_bits);
+            req_rsp_fifo.write((cmd.ar_bits, tag));
             state = 1;
             wait();
         } else {
             state = 0;
-            done = true;
-            done_tag = tag;
             outputUnit_req_core(arg.hdr_count, tag);
         }
     }
@@ -118,17 +65,15 @@ inline void outputUnit::outputUnit_req_core(sc_biguint<32> hdr_count, sc_uint<NU
             }
         }
     }
-    std::cout << "request sent, hdr_count " << hdr_count << ", tag " << tag << "\n";
 }
 
 void outputUnit::outputUnit_rsp() {
     sc_uint<4> state;
     arg_t arg;
+    sc_biguint<32+NUM_THREADS_LG> fifo_out;
     sc_uint<NUM_THREADS_LG> tag;
-    init_wb = false;
 
     bfu_rdrsp.reset();
-    // pkt_buf_in.reset();
     stream_out.reset();
     bfu_out.reset();
     state = 0;
@@ -138,18 +83,10 @@ void outputUnit::outputUnit_rsp() {
     while (true) {
         // cout << sc_time_stamp() << ": rsp state" << state << endl;
         if (state == 0) {
-            if (!init_done.read()) init_wb = false;
-            if (init_done.read()) {
-                init_wb = true;
-                bfu_out.write(init_tag, 0);
-            } else {
-            // if (hdr_done[tag].read() == 1) {
-                bool fifo_v = req_rsp_fifo.nb_read(tag);
-                if (fifo_v) {
-                    arg.set(hdr_arg[tag]);
-                    state = 1;
-                }
-            }
+            req_rsp_fifo.read(fifo_out);
+            tag = fifo_out.range(NUM_THREADS_LG-1, 0);
+            arg.set(fifo_out.range(31+NUM_THREADS_LG, NUM_THREADS_LG));
+            state = 1;
             wait();
         } else {
             state = 0;
@@ -163,8 +100,6 @@ inline void outputUnit::outputUnit_rsp_core(sc_biguint<32> hdr_count, sc_uint<NU
     sc_biguint<512> out_buf;
     sc_uint<8> empty;
     primate_bfu_rsp_t hdr_data;
-    // primate_stream_512_4::payload_t pkt_in;
-    std::cout << "rsp start, hdr_count " << hdr_count << ", tag " << tag << "\n" ;
 
     hdr_data = bfu_rdrsp.read();
     out_buf = hdr_data.data0.range(111, 0);

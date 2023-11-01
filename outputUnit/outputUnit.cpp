@@ -21,7 +21,7 @@ void outputUnit::outputUnit_req() {
             arg.set(cmd.ar_bits);
             req_rsp_fifo.write((cmd.ar_bits, tag));
             state = 1;
-            wait();
+            // wait();
         } else {
             state = 0;
             outputUnit_req_core(arg.hdr_count, tag);
@@ -32,38 +32,22 @@ void outputUnit::outputUnit_req() {
 
 inline void outputUnit::outputUnit_req_core(sc_biguint<32> hdr_count, sc_uint<NUM_THREADS_LG> tag) {
     bfu_rdreq.write(primate_bfu_req_t(tag, 1, 1));
-    if (hdr_count < 10) {
+    if (hdr_count == 1) {
         bfu_rdreq.write(primate_bfu_req_t(tag, 2, 3));
-        if (hdr_count > 1) {
-            if (hdr_count > 2) {
-                if (hdr_count > 3) {
-                    if (hdr_count > 4) {
-                        bfu_rdreq.write(primate_bfu_req_t(tag, 4, 5));
-                        if (hdr_count > 5) {
-                            if (hdr_count > 6) {
-                                if (hdr_count > 7) {
-                                    if (hdr_count > 8) {
-                                        bfu_rdreq.write(primate_bfu_req_t(tag, 6, 7));
-                                    } else {
-                                        bfu_rdreq.write(primate_bfu_req_t(tag, 6, 7));
-                                    }
-                                } else {
-                                    bfu_rdreq.write(primate_bfu_req_t(tag, 6, 6));
-                                }
-                            } else {
-                                bfu_rdreq.write(primate_bfu_req_t(tag, 6, 6));
-                            }
-                        }
-                    } else {
-                        bfu_rdreq.write(primate_bfu_req_t(tag, 4, 5));
-                    }
-                } else {
-                    bfu_rdreq.write(primate_bfu_req_t(tag, 4, 4));
-                }
-            } else {
-                bfu_rdreq.write(primate_bfu_req_t(tag, 4, 4));
-            }
-        }
+    } else if (hdr_count == 2 || hdr_count == 3) {
+        bfu_rdreq.write(primate_bfu_req_t(tag, 2, 3));
+        bfu_rdreq.write(primate_bfu_req_t(tag, 4, 4));
+    } else if (hdr_count == 4 || hdr_count == 5) {
+        bfu_rdreq.write(primate_bfu_req_t(tag, 2, 3));
+        bfu_rdreq.write(primate_bfu_req_t(tag, 4, 5));
+    } else if (hdr_count == 6 || hdr_count == 7) {
+        bfu_rdreq.write(primate_bfu_req_t(tag, 2, 3));
+        bfu_rdreq.write(primate_bfu_req_t(tag, 4, 5));
+        bfu_rdreq.write(primate_bfu_req_t(tag, 6, 6));
+    } else if (hdr_count >= 8) {
+        bfu_rdreq.write(primate_bfu_req_t(tag, 2, 3));
+        bfu_rdreq.write(primate_bfu_req_t(tag, 4, 5));
+        bfu_rdreq.write(primate_bfu_req_t(tag, 6, 7));
     }
 }
 

@@ -94,6 +94,23 @@ struct arg_t {
     }
 };
 
+struct ftOut_t {
+    meta_t pkt;
+    fce_t fce;
+
+    void set(sc_biguint<518> bv) {
+        pkt.set(bv.range(251, 0));
+        fce.set(bv.range(517, 252));
+    }
+
+    sc_biguint<518> to_uint() {
+        sc_biguint<252> tmp0 = pkt.to_uint();
+        sc_biguint<266> tmp1 = fce.to_uint();
+        sc_biguint<518> val = (tmp1, tmp0);
+        return val;
+    }
+};
+
 SC_MODULE(pktReassembly) {
     sc_in<bool> i_clk;
     sc_in<bool> i_rst;
@@ -111,13 +128,10 @@ SC_MODULE(pktReassembly) {
     primate_bfu_iu::master<>          CCS_INIT_S1(bfu_out);
 
     bfu_in::master<>      CCS_INIT_S1(flow_table_read_req);
-    bfu_out::slave<>      CCS_INIT_S1(flow_table_read_rsp);
+    bfu518_out::slave<>   CCS_INIT_S1(flow_table_read_rsp);
 
     bfu_in::master<>      CCS_INIT_S1(flow_table_write_req);
-    bfu_out::slave<>      CCS_INIT_S1(flow_table_write_rsp);
-
-    bfu_in::master<>      CCS_INIT_S1(lock_req);
-    bfu_out::slave<>      CCS_INIT_S1(lock_rsp);
+    // bfu_out::slave<>      CCS_INIT_S1(flow_table_write_rsp);
 
     void pktReassembly_main();
     inline void pktReassembly_core();

@@ -8,10 +8,8 @@ void pktReassembly::pktReassembly_main() {
     stream_out.reset();
     cmd_in.reset();
     bfu_out.reset();
-    lock_req.reset();
-    lock_rsp.reset();
     flow_table_write_req.reset();
-    flow_table_write_rsp.reset();
+    // flow_table_write_rsp.reset();
     flow_table_read_req.reset();
     flow_table_read_rsp.reset();
 
@@ -37,9 +35,9 @@ void pktReassembly::pktReassembly_main() {
                 bt3 = cmd.ar_bits;
             }
             bfu_out.write_last(tag, 0);
-        } else if (opcode & 0x30 == 0x10) {
-            lock_req.write(bfu_in_pl_t(tag, opcode, cmd.ar_imm, cmd.ar_bits));
-            bfu_out_pl_t tmp = lock_rsp.read();
+        } else if (opcode == 1) {
+            flow_table_read_req.write(bfu_in_pl_t(tag, opcode, cmd.ar_imm, cmd.ar_bits));
+            flow_table_read_rsp.read();
             bfu_out.write_last(tag, 0);
         } else {
             pktReassembly_core();
@@ -50,7 +48,6 @@ void pktReassembly::pktReassembly_main() {
 void pktReassembly::pktReassembly_core() {
     primate_stream_272_4::payload_t payload;
 
-    fce_t fte;
     meta_t input;
     payload = stream_in.read();
     input.set(payload.data);
@@ -70,11 +67,14 @@ void pktReassembly::pktReassembly_core() {
         if (input.len != 0) input.pkt_flags = PKT_CHECK;
         else input.pkt_flags = PKT_FORWARD;
         // std::cout << "tcp packet, seq: " << (unsigned)input.seq << ", length: " << input.len << ", flags: " << (unsigned)input.tcp_flags << "\n";
-        lock_req.write(bfu_in_pl_t(tag, 0, 0, input.tuple));
-        lock_rsp.read();
-        flow_table_read_req.write(bfu_in_pl_t(tag, 0, 0, input.to_uint()));
-        bfu_out_pl_t tmp = flow_table_read_rsp.read();
-        fte.set(tmp.bits);
+        ftOut_t ftOut;
+        flow_table_read_req.write(bfu_in_pl_t(tag, 4, 0, input.to_uint()));
+        bfu518_out_pl_t tmp = flow_table_read_rsp.read();
+        ftOut.set(tmp.bits);
+        tag = tmp.tag;
+        fce_t fte;
+        fte = ftOut.fce;
+        input = ftOut.pkt;
         if (fte.ch0_bit_map != 0) { // ch0_bit_map shows which sub-table it hits
             // Flow exists
             // std::cout << "flow " << std::hex << input.tuple << std::dec << " exists, seq: " << fte.seq << "\n";
@@ -87,14 +87,14 @@ void pktReassembly::pktReassembly_core() {
                     // std::cout << std::hex << "tcp flags: " << input.tcp_flags << std::dec << "\n";
                     if ((input.tcp_flags & (1 << TCP_FIN) | (input.tcp_flags & (1 << TCP_RST))) != 0) {
                         flow_table_write_req.write(bfu_in_pl_t(tag, 3, 0, fte.to_uint()));
-                        flow_table_write_rsp.read();
+                        // flow_table_write_rsp.read();
                     } else {
                         fte.seq = input.seq + input.len;
                         flow_table_write_req.write(bfu_in_pl_t(tag, 2, 0, fte.to_uint()));
-                        flow_table_write_rsp.read();
+                        // flow_table_write_rsp.read();
                     }
-                    lock_req.write(bfu_in_pl_t(tag, 1, 0, input.tuple));
-                    lock_rsp.read();
+                    flow_table_read_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
+                    flow_table_read_rsp.read();
                     stream_out.write(primate_io_payload_t(input.to_uint(), tag, 0, true));
                     bfu_out.write_last(tag, bt0);
                     return;
@@ -104,16 +104,21 @@ void pktReassembly::pktReassembly_core() {
                 bfu_out.write(tag, bt2, 1, input.to_uint(), 2, fte.to_uint(), true);
                 return;
             } else {
-                bfu_out.write(tag, bt3, 1, input.to_uint(), true);
+                // drop the packet
+                input.pkt_flags = PKT_DROP;
+                flow_table_read_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
+                flow_table_read_rsp.read();
+                stream_out.write(primate_io_payload_t(input.to_uint(), tag, 0, true));
+                bfu_out.write_last(tag, bt0);
                 return;
             }
         } else {
             // Flow doesn't exist, insert
             // std::cout << "new flow " << std::hex << input.tuple << std::dec << "\n";
             flow_table_write_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
-            flow_table_write_rsp.read();
-            lock_req.write(bfu_in_pl_t(tag, 1, 0, input.tuple));
-            lock_rsp.read();
+            // flow_table_write_rsp.read();
+            flow_table_read_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
+            flow_table_read_rsp.read();
             stream_out.write(primate_io_payload_t(input.to_uint(), tag, 0, true));
             bfu_out.write_last(tag, bt0);
             return;

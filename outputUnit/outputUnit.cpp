@@ -15,17 +15,11 @@ void outputUnit::outputUnit_req() {
     while (true) {
         // if (state != 0)
         //     cout << sc_time_stamp() << ": req state" << state << endl;
-        if (state == 0) {
-            cmd = cmd_in.read();
-            tag = cmd.ar_tag;
-            arg.set(cmd.ar_bits);
-            req_rsp_fifo.write((cmd.ar_bits, tag));
-            state = 1;
-            // wait();
-        } else {
-            state = 0;
-            outputUnit_req_core(arg.hdr_count, tag);
-        }
+        cmd = cmd_in.read();
+        tag = cmd.ar_tag;
+        arg.set(cmd.ar_bits);
+        req_rsp_fifo.write((cmd.ar_bits, tag));
+        outputUnit_req_core(arg.hdr_count, tag);
     }
 
 }
@@ -66,16 +60,10 @@ void outputUnit::outputUnit_rsp() {
 
     while (true) {
         // cout << sc_time_stamp() << ": rsp state" << state << endl;
-        if (state == 0) {
-            req_rsp_fifo.read(fifo_out);
-            tag = fifo_out.range(NUM_THREADS_LG-1, 0);
-            arg.set(fifo_out.range(31+NUM_THREADS_LG, NUM_THREADS_LG));
-            state = 1;
-            wait();
-        } else {
-            state = 0;
-            outputUnit_rsp_core(arg.hdr_count, tag);
-        }
+        req_rsp_fifo.read(fifo_out);
+        tag = fifo_out.range(NUM_THREADS_LG-1, 0);
+        arg.set(fifo_out.range(31+NUM_THREADS_LG, NUM_THREADS_LG));
+        outputUnit_rsp_core(arg.hdr_count, tag);
     }
 
 }

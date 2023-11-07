@@ -15,7 +15,7 @@ solution library add mgc_Xilinx-VIRTEX-uplus-2L_beh -- -rtlsyntool Vivado -manuf
 solution library add Xilinx_RAMS
 go libraries
 
-directive set -CLOCKS {i_clk {-CLOCK_PERIOD 3 -CLOCK_HIGH_TIME 2 -CLOCK_OFFSET 0.000000 -CLOCK_UNCERTAINTY 0.0}}
+directive set -CLOCKS {i_clk {-CLOCK_PERIOD 4 -CLOCK_HIGH_TIME 2 -CLOCK_OFFSET 0.000000 -CLOCK_UNCERTAINTY 0.0}}
 go assembly
 go extract
 flow run /SCVerify/launch_make ./scverify/Verify_concat_sim_rtl_v_msim.mk {} SIMTOOL=msim simgui

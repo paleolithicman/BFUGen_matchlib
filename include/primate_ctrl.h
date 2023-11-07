@@ -15,12 +15,12 @@ public:
         sc_uint<OP_W>           ar_opcode;
         sc_uint<ADDR_W>         ar_rd;
         sc_biguint<DATA_W>      ar_bits;
-        sc_biguint<DATA_W>      ar_imm;
+        sc_biguint<32>          ar_imm;
 
-        static const unsigned int width = TAG_W+OP_W+ADDR_W+DATA_W*2;
+        static const unsigned int width = TAG_W+OP_W+ADDR_W+DATA_W+32;
 
         cmd_t(sc_uint<TAG_W> ar_tag = 0, sc_uint<OP_W> ar_opcode = 0, sc_uint<ADDR_W> ar_rd = 0, 
-            sc_biguint<DATA_W> ar_bits = 0, sc_biguint<DATA_W> ar_imm = 0) : 
+            sc_biguint<DATA_W> ar_bits = 0, sc_biguint<32> ar_imm = 0) : 
             ar_tag(ar_tag), ar_opcode(ar_opcode), ar_rd(ar_rd), ar_bits(ar_bits), ar_imm(ar_imm) {}
 
         template <unsigned int Size>

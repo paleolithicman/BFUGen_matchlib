@@ -115,7 +115,11 @@ void pktReassembly::pktReassembly_core() {
         } else {
             // Flow doesn't exist, insert
             // std::cout << "new flow " << std::hex << input.tuple << std::dec << "\n";
-            flow_table_write_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
+            fte.ch0_bit_map = 0x10;
+
+            if (((input.tcp_flags & (1 << TCP_FIN)) | (input.tcp_flags & (1 << TCP_RST))) == 0) {
+                flow_table_write_req.write(bfu_in_pl_t(tag, 1, 0, fte.to_uint()));
+            }
             // flow_table_write_rsp.read();
             flow_table_read_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
             flow_table_read_rsp.read();

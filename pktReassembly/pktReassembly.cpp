@@ -46,7 +46,7 @@ void pktReassembly::pktReassembly_main() {
 }
 
 void pktReassembly::pktReassembly_core() {
-    primate_stream_272_4::payload_t payload;
+    primate_stream_256_4::payload_t payload;
 
     meta_t input;
     payload = stream_in.read();

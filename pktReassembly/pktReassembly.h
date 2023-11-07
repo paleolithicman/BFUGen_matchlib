@@ -1,3 +1,6 @@
+#ifndef _PKTREASSEMBLY_
+#define _PKTREASSEMBLY_
+
 #include "common.h"
 #define TCP_FIN 0
 #define TCP_SYN 1
@@ -32,8 +35,8 @@ struct meta_t {
         last_7_bytes_pdu_flag = bv.range(251, 194);
     }
 
-    inline sc_biguint<272> to_uint() {
-        sc_biguint<272> val = (0, last_7_bytes_pdu_flag, pkt_flags, tcp_flags, hdr_len_flits_empty_pktID, 
+    inline sc_biguint<266> to_uint() {
+        sc_biguint<REG_WIDTH> val = (0, last_7_bytes_pdu_flag, pkt_flags, tcp_flags, hdr_len_flits_empty_pktID, 
             len, seq, tuple, prot);
         return val;
     }
@@ -58,8 +61,8 @@ struct fce_t {
         ch0_bit_map = bv.range(265, 261);
     }
 
-    inline sc_biguint<272> to_uint() {
-        sc_biguint<272> val = (0, ch0_bit_map, pointer2, addr3_addr2_addr1_addr0_last_7_bytes, 
+    inline sc_biguint<266> to_uint() {
+        sc_biguint<266> val = (0, ch0_bit_map, pointer2, addr3_addr2_addr1_addr0_last_7_bytes, 
             slow_cnt, pointer, seq, tuple);
         return val;
     }
@@ -74,9 +77,9 @@ struct dymem_t{
         next = bv.range(260, 252);
     }
 
-    inline sc_biguint<272> to_uint() {
+    inline sc_biguint<266> to_uint() {
         sc_biguint<252> tmp = meta.to_uint();
-        sc_biguint<272> val = (0, next, tmp);
+        sc_biguint<266> val = (0, next, tmp);
         return val;
     }
 };
@@ -84,12 +87,12 @@ struct dymem_t{
 struct arg_t {
     meta_t input;
 
-    void set(sc_biguint<272> bv) {
-        input.set(bv.range(271, 0));
+    void set(sc_biguint<266> bv) {
+        input.set(bv.range(265, 0));
     }
 
-    sc_biguint<272> to_uint() {
-        sc_biguint<272> val = (0, input.to_uint());
+    sc_biguint<266> to_uint() {
+        sc_biguint<266> val = (0, input.to_uint());
         return val;
     }
 };
@@ -122,8 +125,8 @@ SC_MODULE(pktReassembly) {
     sc_uint<IP_WIDTH> bt2;
     sc_uint<IP_WIDTH> bt3;
 
-    primate_stream_272_4::slave<>     CCS_INIT_S1(stream_in);
-    primate_stream_272_4::master<>    CCS_INIT_S1(stream_out);
+    primate_stream_256_4::slave<>     CCS_INIT_S1(stream_in);
+    primate_stream_256_4::master<>    CCS_INIT_S1(stream_out);
     primate_ctrl_iu::slave<>          CCS_INIT_S1(cmd_in);
     primate_bfu_iu::master<>          CCS_INIT_S1(bfu_out);
 
@@ -142,3 +145,4 @@ SC_MODULE(pktReassembly) {
     };
 };
 
+#endif

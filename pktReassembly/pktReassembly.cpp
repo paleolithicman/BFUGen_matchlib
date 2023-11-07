@@ -12,6 +12,7 @@ void pktReassembly::pktReassembly_main() {
     // flow_table_write_rsp.reset();
     flow_table_read_req.reset();
     flow_table_read_rsp.reset();
+    unlock_req.reset();
 
     bt0 = 0;
     bt1 = 0;
@@ -20,6 +21,7 @@ void pktReassembly::pktReassembly_main() {
     
     wait();
 
+#pragma hls_pipeline_init_interval 1
     while (true) {
         cmd = cmd_in.read();
         tag = cmd.ar_tag;
@@ -36,8 +38,7 @@ void pktReassembly::pktReassembly_main() {
             }
             bfu_out.write_last(tag, 0);
         } else if (opcode == 1) {
-            flow_table_read_req.write(bfu_in_pl_t(tag, opcode, cmd.ar_imm, cmd.ar_bits));
-            flow_table_read_rsp.read();
+            unlock_req.write(bfu_in_pl_t(tag, opcode, cmd.ar_imm, cmd.ar_bits));
             bfu_out.write_last(tag, 0);
         } else {
             pktReassembly_core();
@@ -93,8 +94,7 @@ void pktReassembly::pktReassembly_core() {
                         flow_table_write_req.write(bfu_in_pl_t(tag, 2, 0, fte.to_uint()));
                         // flow_table_write_rsp.read();
                     }
-                    flow_table_read_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
-                    flow_table_read_rsp.read();
+                    unlock_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
                     stream_out.write(primate_io_payload_t(input.to_uint(), tag, 0, true));
                     bfu_out.write_last(tag, bt0);
                     return;
@@ -106,8 +106,7 @@ void pktReassembly::pktReassembly_core() {
             } else {
                 // drop the packet
                 input.pkt_flags = PKT_DROP;
-                flow_table_read_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
-                flow_table_read_rsp.read();
+                unlock_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
                 stream_out.write(primate_io_payload_t(input.to_uint(), tag, 0, true));
                 bfu_out.write_last(tag, bt0);
                 return;
@@ -121,8 +120,7 @@ void pktReassembly::pktReassembly_core() {
                 flow_table_write_req.write(bfu_in_pl_t(tag, 1, 0, fte.to_uint()));
             }
             // flow_table_write_rsp.read();
-            flow_table_read_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
-            flow_table_read_rsp.read();
+            unlock_req.write(bfu_in_pl_t(tag, 1, 0, input.to_uint()));
             stream_out.write(primate_io_payload_t(input.to_uint(), tag, 0, true));
             bfu_out.write_last(tag, bt0);
             return;

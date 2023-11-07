@@ -130,6 +130,8 @@ SC_MODULE(pktReassembly) {
     primate_ctrl_iu::slave<>          CCS_INIT_S1(cmd_in);
     primate_bfu_iu::master<>          CCS_INIT_S1(bfu_out);
 
+    bfu_in::master<>      CCS_INIT_S1(unlock_req);
+
     bfu_in::master<>      CCS_INIT_S1(flow_table_read_req);
     bfu518_out::slave<>   CCS_INIT_S1(flow_table_read_rsp);
 

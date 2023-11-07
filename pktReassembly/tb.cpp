@@ -26,7 +26,7 @@ public:
     sc_in<bool>                      i_rst;
 
     bfu_in::slave<>                  CCS_INIT_S1(lock_in);
-    bfu_out::master<>                CCS_INIT_S1(lock_out);
+    // bfu_out::master<>                CCS_INIT_S1(lock_out);
 
     SC_HAS_PROCESS(lock);
     lock(sc_module_name name_) {
@@ -37,12 +37,13 @@ public:
     void th_run() {
         bfu_in_pl_t cmd;
         lock_in.reset();
-        lock_out.reset();
+        // lock_out.reset();
         wait();
 
         while(true) {
             cmd = lock_in.read();
-            lock_out.write(bfu_out_pl_t(cmd.tag, 0, 0));
+            wait();
+            // lock_out.write(bfu_out_pl_t(cmd.tag, 0, 0));
         }
     }
 };
@@ -304,7 +305,7 @@ public:
     primate_ctrl_iu::chan<>             CCS_INIT_S1(tb_to_dut_ctrl);
     primate_bfu_iu::chan<>              CCS_INIT_S1(dut_to_tb_ctrl);
 
-    // bfu_in::chan<>                      CCS_INIT_S1(dut_to_lock);
+    bfu_in::chan<>                      CCS_INIT_S1(dut_to_lock);
     // bfu_out::chan<>                     CCS_INIT_S1(lock_to_dut);
     bfu_in::chan<>                      CCS_INIT_S1(dut_to_ft_read);
     bfu518_out::chan<>                  CCS_INIT_S1(ft_read_to_dut);
@@ -324,10 +325,10 @@ public:
         sink_inst->bfu_in(dut_to_tb_ctrl);
         sink_inst->stream_in(dut_to_tb_data);
 
-        // lock_inst = new lock("lock_inst");
-        // lock_inst->i_clk(clk_sig);
-        // lock_inst->i_rst(rst_sig);
-        // lock_inst->lock_in(dut_to_lock);
+        lock_inst = new lock("lock_inst");
+        lock_inst->i_clk(clk_sig);
+        lock_inst->i_rst(rst_sig);
+        lock_inst->lock_in(dut_to_lock);
         // lock_inst->lock_out(lock_to_dut);
 
         flow_table_read_inst = new flow_table_read("flow_table_read_inst");
@@ -353,7 +354,7 @@ public:
         pktReassembly_inst->flow_table_read_rsp(ft_read_to_dut);
         pktReassembly_inst->flow_table_write_req(dut_to_ft_write);
         // pktReassembly_inst->flow_table_write_rsp(ft_write_to_dut);
-        // pktReassembly_inst->lock_req(dut_to_lock);
+        pktReassembly_inst->unlock_req(dut_to_lock);
         // pktReassembly_inst->lock_rsp(lock_to_dut);
     }
 

@@ -88,7 +88,7 @@ struct arg_t {
     meta_t input;
 
     void set(sc_biguint<266> bv) {
-        input.set(bv.range(265, 0));
+        input.set(bv.range(251, 0));
     }
 
     sc_biguint<266> to_uint() {
@@ -114,12 +114,27 @@ struct ftOut_t {
     }
 };
 
+struct output_t {
+    sc_uint<NUM_THREADS_LG> tag;
+    sc_uint<OPCODE_WIDTH> opcode;
+    sc_biguint<252> data;
+
+    void set(sc_biguint<252+OPCODE_WIDTH+NUM_THREADS_LG> bv) {
+        tag = bv.range(NUM_THREADS_LG-1, 0);
+        opcode = bv.range(NUM_THREADS_LG+OPCODE_WIDTH-1, NUM_THREADS_LG);
+        data = bv.range(NUM_THREADS_LG+OPCODE_WIDTH+251, NUM_THREADS_LG+OPCODE_WIDTH);
+    }
+
+    sc_biguint<252+OPCODE_WIDTH+NUM_THREADS_LG> to_uint() {
+        sc_biguint<252+OPCODE_WIDTH+NUM_THREADS_LG> val = (data, opcode, tag);
+        return val;
+    }
+};
+
 SC_MODULE(pktReassembly) {
     sc_in<bool> i_clk;
     sc_in<bool> i_rst;
 
-    sc_uint<NUM_THREADS_LG> tag;
-    sc_uint<OPCODE_WIDTH> opcode;
     sc_uint<IP_WIDTH> bt0;
     sc_uint<IP_WIDTH> bt1;
     sc_uint<IP_WIDTH> bt2;
@@ -138,11 +153,17 @@ SC_MODULE(pktReassembly) {
     bfu_in::master<>      CCS_INIT_S1(flow_table_write_req);
     // bfu_out::slave<>      CCS_INIT_S1(flow_table_write_rsp);
 
-    void pktReassembly_main();
-    inline void pktReassembly_core();
+    void pktReassembly_stage0();
+    void pktReassembly_stage0_core(sc_uint<NUM_THREADS_LG> tag, sc_uint<OPCODE_WIDTH> opcode);
+    void pktReassembly_stage1();
+    void pktReassembly_stage1_core(sc_uint<NUM_THREADS_LG> tag, sc_uint<OPCODE_WIDTH> opcode, meta_t input);
 
-    SC_CTOR(pktReassembly) {
-        SC_CTHREAD(pktReassembly_main, i_clk.pos());
+    sc_fifo<sc_biguint<252+NUM_THREADS_LG+OPCODE_WIDTH>> req_rsp_fifo;
+
+    SC_CTOR(pktReassembly) : req_rsp_fifo(8) {
+        SC_CTHREAD(pktReassembly_stage0, i_clk.pos());
+        reset_signal_is(i_rst, true);  // true is hihg, flase is low
+        SC_CTHREAD(pktReassembly_stage1, i_clk.pos());
         reset_signal_is(i_rst, true);  // true is hihg, flase is low
     };
 };

@@ -160,7 +160,7 @@ SC_MODULE(pktReassembly) {
 
     sc_fifo<sc_biguint<252+NUM_THREADS_LG+OPCODE_WIDTH>> req_rsp_fifo;
 
-    SC_CTOR(pktReassembly) : req_rsp_fifo(8) {
+    SC_CTOR(pktReassembly) : req_rsp_fifo(16) {
         SC_CTHREAD(pktReassembly_stage0, i_clk.pos());
         reset_signal_is(i_rst, true);  // true is hihg, flase is low
         SC_CTHREAD(pktReassembly_stage1, i_clk.pos());

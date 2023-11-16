@@ -18,7 +18,7 @@
 
 typedef primate_ctrl<NUM_THREADS_LG, OPCODE_WIDTH, NUM_REGS_LG, REG_WIDTH> primate_ctrl_iu;
 typedef primate_bfu_mc::write_mc<NUM_THREADS_LG, IP_WIDTH, NUM_REGS_LG, REG_WIDTH> primate_bfu_iu;
-typedef primate_stream<cfg_biguint<256, 4, 5>> primate_stream_256_4;
+typedef primate_stream<cfg_biguint<256, 5, 4>> primate_stream_256_4;
 typedef primate_stream_256_4::payload_t primate_io_payload_t;
 typedef primate_bfu::bfu_in<NUM_THREADS_LG, OPCODE_WIDTH, 12, REG_WIDTH> bfu_in;
 typedef primate_bfu::bfu_out<NUM_THREADS_LG, IP_WIDTH, REG_WIDTH> bfu_out;

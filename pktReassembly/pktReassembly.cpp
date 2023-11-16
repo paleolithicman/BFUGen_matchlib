@@ -17,6 +17,7 @@ void pktReassembly::pktReassembly_stage0() {
     wait();
 
 #pragma hls_pipeline_init_interval 1
+#pragma hls_pipeline_stall_mode flush
     while (true) {
         cmd = cmd_in.read();
         sc_uint<NUM_THREADS_LG> tag = cmd.ar_tag;
@@ -37,17 +38,17 @@ void pktReassembly::pktReassembly_stage0() {
         //     req_rsp_fifo.write(arg.to_uint());
         //     // bfu_out.write_last(tag, 0);
         // } else if (opcode == 1) {
-        if (opcode == 1) {
-            output_t out;
-            out.tag = tag;
-            out.opcode = opcode;
-            out.data = cmd.ar_bits;
-            req_rsp_fifo.write(out.to_uint());
+        //if (opcode == 1) {
+        //    output_t out;
+        //    out.tag = tag;
+        //    out.opcode = opcode;
+        //    out.data = cmd.ar_bits;
+        //    req_rsp_fifo.write(out.to_uint());
             // unlock_req.write(bfu_in_pl_t(tag, opcode, cmd.ar_imm, cmd.ar_bits));
             // bfu_out.write_last(tag, 0);
-        } else {
+        //} else {
             pktReassembly_stage0_core(tag, opcode);
-        }
+        //}
     }
 }
 
@@ -105,6 +106,7 @@ void pktReassembly::pktReassembly_stage1() {
     wait();
 
 #pragma hls_pipeline_init_interval 1
+#pragma hls_pipeline_stall_mode flush
     while (true) {
         output_t out;
         sc_biguint<NUM_THREADS_LG+OPCODE_WIDTH+252> fifo_out;
@@ -112,7 +114,7 @@ void pktReassembly::pktReassembly_stage1() {
         out.set(fifo_out);
         if (out.opcode == 0x3f) {
             stream_out.write(primate_io_payload_t(out.data, out.tag, 0, true));
-            bfu_out.write_last(out.tag, bt0);
+            bfu_out.write_last(out.tag, 2);
         } else if (out.opcode == 1) {
             unlock_req.write(bfu_in_pl_t(out.tag, out.opcode, 0, out.data));
             bfu_out.write_last(out.tag, 0);
@@ -137,7 +139,7 @@ void pktReassembly::pktReassembly_stage1_core(sc_uint<NUM_THREADS_LG> tag, sc_ui
         // std::cout << "flow " << std::hex << input.tuple << std::dec << " exists, seq: " << fte.seq << "\n";
         if (input.seq == fte.seq) {
             if (fte.slow_cnt > 0) {
-                bfu_out.write(tag, bt1, 1, input.to_uint(), 2, fte.to_uint(), true);
+                bfu_out.write(tag, bt1, 1, input.to_uint(), 2, fte.to_uint(), true, true);
                 return;
             } else {
                 // in order packet
@@ -157,7 +159,7 @@ void pktReassembly::pktReassembly_stage1_core(sc_uint<NUM_THREADS_LG> tag, sc_ui
             }
         } else if (input.seq > fte.seq) {
             // insert packet
-            bfu_out.write(tag, bt2, 1, input.to_uint(), 2, fte.to_uint(), true);
+            bfu_out.write(tag, bt2, 1, input.to_uint(), 2, fte.to_uint(), true, true);
             return;
         } else {
             // drop the packet
